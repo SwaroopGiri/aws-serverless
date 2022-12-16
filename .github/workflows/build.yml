@@ -1,1 +1,38 @@
+#This workflow will build and deploy Lambda
+name: Building and Deploying Lambda function
 
+# Controls when the workflow will run
+on:
+  pull_request_target:
+    types:
+      - closed
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: buildlambda
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Creating a zip file for lambda
+        run: |
+             zip -r index.zip ./
+             ls -al
+      - name: Configuring AWS Serverless Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEMO }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEMO }}
+          aws-region: us-east-1
+      - name: Copying artifact to S3
+        run: |
+          aws s3 cp ./index.zip s3://deploy.serverless.v10/
+      - name: Lambda Update
+        run: |
+          aws lambda update-function-code --function-name VerifyEmail --s3-bucket deploy.serverless.v10 --s3-key index.zip
